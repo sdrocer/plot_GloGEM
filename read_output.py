@@ -11,7 +11,10 @@ import numpy as np
 import pandas as pd
 
 class Read_GloGEM():
-    def read_firnice_temperature(self):
+    def point_firnice_temperature(dir):
         """reads the output of the firnice_temperature model & returns it as a np array"""
-        temp_data = np.loadtxt(self)
-        return temp_data
+        temp_data = pd.read_csv(dir, delim_whitespace=True, header=1, index_col=False)
+        with open(dir,'r') as file:
+            elevation = file.readline().strip()[17:21]
+        return (temp_data,elevation)
+    
