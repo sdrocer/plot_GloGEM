@@ -42,6 +42,10 @@ class plot_firnice_temperature:
         temp_data['CalYear'] = glacyear_to_calyear(1979,2019)
         temp_data['Timestamp'] = pd.to_datetime(temp_data['CalYear'].astype(str) + '-' + temp_data['Month'].astype(str), format='%Y-%m')
 
+        start_date = '1990-01-01'
+        temp_data = temp_data[(temp_data['Timestamp'] >= start_date)]
+
+        print(temp_data)
         plt.figure(figsize=(10, 4))
 
         # plot different depths
@@ -53,9 +57,15 @@ class plot_firnice_temperature:
             plt.plot(temp_data['Timestamp'],temp_data[depth], color=color, label=label)
 
         # format
-        plt.ylim(-8,0)
+        plt.ylim(-15,0)
         plt.xlabel("Time [years]")
         plt.ylabel("Ice temperature [°C]")
+
+        # format xticks
+        ax = plt.gca()  
+        ax.xaxis.set_major_locator(YearLocator(5)) ## calling the locator for the x-axis
+        ax.xaxis.set_major_formatter(DateFormatter("%Y")) ## calling the formatter for the x-axis
+
         plt.grid(alpha=0.5)
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5),title="Depth")
         plt.title("Ice temperatures at " + gl_name + " (" + elevation + " m)")
@@ -90,11 +100,11 @@ class plot_firnice_temperature:
         plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/heatmap_01450.png")        
 
 
-## Plotting
+## Plotting ## 
 
 # set dir & depths
-dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/temp_ID1_01450.dat"
-depths = ['3','5','9','14','24','34']
+dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates/temp_ID1_"
+depths = ['3','5','9','14','24']
 
 IceTempPlot = plot_firnice_temperature()
 
@@ -102,11 +112,11 @@ IceTempPlot = plot_firnice_temperature()
 IceTempPlot.single_point(dir, ['3','5','9','14','24','34'],"Aletsch glacier") # Aletsch
 
 # Glacier Candidates (according to Doctoral Plan)
-IceTempPlot.single_point() # Chessjengletscher
-IceTempPlot.single_point() # Hohlaubgletscher at Saas Grund
-IceTempPlot.single_point() # Sex Rouge
-IceTempPlot.single_point() # Glacier de Tortin
-IceTempPlot.single_point() # Milibachgletscher
-IceTempPlot.single_point() # Corvatsch
-IceTempPlot.single_point() # Triftjigletscher at Gornergrat
-IceTempPlot.single_point() # Alphubel South
+IceTempPlot.single_point(dir + "02624.dat", depths, "Chessjengletscher") # Chessjengletscher
+IceTempPlot.single_point(dir + "02526.dat", depths, "Hohlaubgletscher") # Hohlaubgletscher at Saas Grund
+IceTempPlot.single_point(dir + "02244.dat", depths, "Sex Rouge") # Sex Rouge
+IceTempPlot.single_point(dir + "02600.dat", depths, "Glacier de Tortin") # Glacier de Tortin
+IceTempPlot.single_point(dir + "01931.dat", depths, "Milibachgletscher") # Milibachgletscher
+IceTempPlot.single_point(dir + "01962.dat", depths, "Vadret dal Corvatsch") # Corvatsch
+IceTempPlot.single_point(dir + "02803.dat", depths, "Triftjigletscher at Gornergrat") # Triftjigletscher at Gornergrat
+IceTempPlot.single_point(dir + "02692.dat", depths, "Alphubel South") # Alphubel South
