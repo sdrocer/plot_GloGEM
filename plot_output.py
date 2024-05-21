@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import os
 
+os.chdir("/home/jabeer/code/plot_GloGEM")
 from read_output import Read_GloGEM # make sure to change the working directory to folder where you code -> os.chdir
 
 # Increase the DPI
@@ -55,6 +57,19 @@ class plot_firnice_temperature:
         plt.tight_layout()
         plt.title("14m ice temperature for RGI" + dir[-9:-4] + " at " + elevation + " m")
         plt.savefig("/home/jabeer/products/test_run01/plots/14m_icetemp_" + dir[-9:-4])
+
+    def heatmap(self, dir):
+        (temp_data,elevation) = Read_GloGEM.point_firnice_temperature(dir)
+
+        # create timestamp from glaciological year
+        temp_data['CalYear'] = glacyear_to_calyear(1979,2019)
+        temp_data['Timestamp'] = pd.to_datetime(temp_data['CalYear'].astype(str) + '-' + temp_data['Month'].astype(str), format='%Y-%m')
+
+        # create ice temperature heatmap
+        plt.figure(figsize=(10, 4))
+
+        
+
 
 
 # Plotting
