@@ -45,7 +45,6 @@ class plot_firnice_temperature:
         start_date = '1990-01-01'
         temp_data = temp_data[(temp_data['Timestamp'] >= start_date)]
 
-        print(temp_data)
         plt.figure(figsize=(10, 4))
 
         # plot different depths
@@ -91,27 +90,82 @@ class plot_firnice_temperature:
         plt.imshow(temp_data_t)
         # sns.heatmap(temp_data_t, cmap='viridis', cbar_kws={'label': 'Ice Temperature (°C)'}, yticklabels=True, vmax=30)
 
-        # Format x-axis to show only the year
+        # format x-axis to show only the year
         ax = plt.gca()  
         ax.xaxis.set_major_locator(YearLocator(1)) ## calling the locator for the x-axis
         ax.xaxis.set_major_formatter(DateFormatter("%Y")) ## calling the formatter for the x-axis
-
         plt.xticks(rotation=45, ha='right')
+
+        # savefig
         plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/heatmap_01450.png")        
 
+    def elevation_bands(self, dir, gl_name):
+        temp_data = Read_GloGEM.elevation_band_firnice_temperature(dir)
+        temp_data.set_index('Elev', inplace=True)
 
-## Plotting ## 
+        # check depth of temperature measurement
+        depth = dir[-13:-10]
+
+        # create heatmap
+        fig, ax = plt.subplots(figsize=(6,5))
+        cax = ax.imshow(temp_data)
+
+        # format a
+        years = list(map(int, temp_data.columns))
+        elevations = list(map(int, temp_data.index))
+
+        # Set the positions for the ticks every 5 years
+        xtick_positions = np.arange(0, len(years), 5)
+        xtick_labels = years[0::5]  # Labels for every 5th year
+        ytick_positions = np.arange(0, len(elevations), 5)
+        ytick_labels = elevations[0::5]  # Labels for every 10th elevation band
+
+        # Set the tick positions and labels on the x-axis
+        ax.set_xticks(xtick_positions)
+        ax.set_xticklabels(xtick_labels)
+        ax.set_yticks(ytick_positions)
+        ax.set_yticklabels(ytick_labels)
+        plt.xlabel("Time [years]")
+        plt.ylabel("Elevation [m]")
+        plt.xticks(rotation=45) 
+        plt.title(gl_name)
+        plt.tight_layout()
+
+        # add colorbar
+        cbar = plt.colorbar(cax)
+        cbar.set_label(depth + " ice temperature")  # Set the colorbar label
+
+
+        # savefig
+        plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/bands_" + gl_name)
+
+
+    def elevation_bands_map(self, dir, shp, DEM):
+        """ 
+            idea: function that takes the RGI as a shape file as well as a digital elevation model and computes the elevation per pixel.
+            The pixel will be colored acoording to the it's ice temperature (taken from the respective elevation band temperature).
+            This will ultimately give a 2-dimensional snapshot in time (per year) of the ice temperature of a particular glacier 
+        """
+        temp_data = Read_GloGEM.elevation_band_firnice_temperature(dir)
+
+        
+
+### Plotting ###
 
 # set dir & depths
 dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates/temp_ID1_"
-depths = ['3','5','9','14','24']
+dir_bands = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates/temp_10m_"
+depths = ['3','5','9','14','19']
+gl_name = "Milibachgletscher"
 
 IceTempPlot = plot_firnice_temperature()
 
 # Example glaciers
 IceTempPlot.single_point(dir, ['3','5','9','14','24','34'],"Aletsch glacier") # Aletsch
 
-# Glacier Candidates (according to Doctoral Plan)
+## Glacier Candidates (according to Doctoral Plan)
+
+# single point, different depths
 IceTempPlot.single_point(dir + "02624.dat", depths, "Chessjengletscher") # Chessjengletscher
 IceTempPlot.single_point(dir + "02526.dat", depths, "Hohlaubgletscher") # Hohlaubgletscher at Saas Grund
 IceTempPlot.single_point(dir + "02244.dat", depths, "Sex Rouge") # Sex Rouge
@@ -120,3 +174,13 @@ IceTempPlot.single_point(dir + "01931.dat", depths, "Milibachgletscher") # Milib
 IceTempPlot.single_point(dir + "01962.dat", depths, "Vadret dal Corvatsch") # Corvatsch
 IceTempPlot.single_point(dir + "02803.dat", depths, "Triftjigletscher at Gornergrat") # Triftjigletscher at Gornergrat
 IceTempPlot.single_point(dir + "02692.dat", depths, "Alphubel South") # Alphubel South
+
+# elevation bands
+IceTempPlot.elevation_bands(dir_bands + "02624.dat", "Chessjengletscher") # Chessjengletscher
+IceTempPlot.elevation_bands(dir_bands + "02526.dat", "Hohlaubgletscher") # Hohlaubgletscher at Saas Grund
+IceTempPlot.elevation_bands(dir_bands + "02244.dat", "Sex Rouge") # Sex Rouge
+IceTempPlot.elevation_bands(dir_bands + "02600.dat", "Glacier de Tortin") # Glacier de Tortin
+IceTempPlot.elevation_bands(dir_bands + "01931.dat", "Milibachgletscher") # Milibachgletscher
+IceTempPlot.elevation_bands(dir_bands + "01962.dat", "Vadret dal Corvatsch") # Corvatsch
+IceTempPlot.elevation_bands(dir_bands + "02803.dat", "Triftjigletscher at Gornergrat") # Triftjigletscher at Gornergrat
+IceTempPlot.elevation_bands(dir_bands + "02692.dat", "Alphubel South") # Alphubel South
