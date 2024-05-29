@@ -20,7 +20,7 @@ class Read_GloGEM():
     
     def elevation_band_firnice_temperature(dir):
         """reads the elevation band ouput of the firnice_temperature model & returns it as a dataframe"""
-        temp_data = pd.read_csv(dir, delim_whitespace=True, header=0, index_col=False)
+        temp_data = pd.read_csv(dir, delim_whitespace=True, header=0, index_col='Elev')
         temp_data.replace(-99.0, np.nan, inplace=True)
         return (temp_data)
     
