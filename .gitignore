@@ -3,3 +3,4 @@ plots/
 rasters/
 __pycache__/read_output.cpython-312.pyc
 glacier_dem.tif.aux.xml
+__pycache__/read_output.cpython-312.pyc
