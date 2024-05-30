@@ -8,18 +8,22 @@
 import os
 import numpy as np
 import pandas as pd
+import glob
 
 # import geospatial libraries
 import shapefile as shp
 import geopandas as gpd
-from shapely.geometry import mapping
 import rioxarray as rxr
-import rasterio
 import xarray as xr
+import rasterio
+from rasterio.merge import merge
+from shapely.geometry import mapping
 
 # import plotting libraries
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import matplotlib.cm as cm
+import imageio # for creating gifs
 from matplotlib.dates import YearLocator, DateFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable # to create a colorbar
 
@@ -117,20 +121,33 @@ class plot_firnice_temperature:
         """ 
             idea: function that takes the RGI as a shape file as well as a digital elevation model and computes the elevation per pixel.
             The pixel will be colored acoording to it's ice temperature (taken from the respective elevation band temperature).
-            This will ultimately give a 2-dimensional snapshot in time (per year) of the ice temperature (at a certain depth) of a particular glacier 
+            This will ultimately give a 2-dimensional snapshot in time (per year) of the ice temperature (at a certain depth) of a particular glacier. 
         """
-        # set directions
-        main_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates/"
-        dir_bands = main_dir + "temp_10m_" + rgiid_to_find + ".dat"
-        rgi_dir = "/Users/janoschbeer/iCloud/PhD/data/RGI/11_rgi60_CentralEurope/11_rgi60_CentralEurope.shp"
-        dem_dir = "/Users/janoschbeer/iCloud/PhD/data/swissALTI3D/r2023/swissALTI3D_2023_10m_LV95_LN02.tif"
-        ela_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/main_output/" + rgiid_to_find + "_ELA_r1.dat"
-
-        # read glaciers ice temperature data per elevation band
-        temp_data = Read_GloGEM.elevation_band_firnice_temperature(dir_bands)
-
         # check glacier name
         gl_name = gl_names[rgiid_to_find]
+
+        # set directions
+        main_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates/"
+        bands_dir = main_dir + "temp_10m_" + rgiid_to_find + ".dat"
+        rgi_dir = "/Users/janoschbeer/iCloud/PhD/data/RGI/11_rgi60_CentralEurope/11_rgi60_CentralEurope.shp"
+        ela_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/main_output/" + rgiid_to_find + "_ELA_r1.dat"
+        
+        # set dem directory -> find the folder that contains the gl_name
+        dem_dir = ""
+        swissALTI3D_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/swissALTI3D/"
+        folders = glob.glob(swissALTI3D_dir + "*")
+        for folder in folders:
+            if gl_name in folder:
+                dem_dir = folder + "/merged_ortho.tif"
+                break
+
+        if dem_dir == "":
+            print("Could not find the DEM folder for the glacier:", gl_name)
+        else:
+            print("DEM directory:", dem_dir)
+
+        # read glaciers ice temperature data per elevation band
+        temp_data = Read_GloGEM.elevation_band_firnice_temperature(bands_dir)
 
         # read RGI60 shapefile
         rgi_gdf = gpd.read_file(rgi_dir)
@@ -167,7 +184,7 @@ class plot_firnice_temperature:
         fig, ax = plt.subplots(figsize=(15, 12))
         plt.rcParams.update({'font.size': 20})  # Adjust font size as needed
         im = plt.imshow(temperature_dem, cmap='coolwarm')
-        plt.title(f"{dir_bands[-13:-10]} ice temperatures for {gl_name} in {year}", fontsize=22, fontweight='bold')  # Add fontweight='bold' to make the title bold
+        plt.title(f"{bands_dir[-13:-10]} ice temperatures for {gl_name} in {year}", fontsize=22, fontweight='bold', pad=20)  # Add pad=20 to increase the distance of the title from the plot
         plt.grid()
         
         # Add colorbar that is the same height as the plot
@@ -187,10 +204,10 @@ class plot_firnice_temperature:
         ax.legend(el1 + el2, ['Elevation Contour', 'ELA'], loc='upper left', handles=[el1[0], el2[0]], labels=['50m contours', 'ELA'])
 
         # Set x and y axis labels to CRS coordinates without decimals
-        x_ticks = np.arange(0, temperature_dem.shape[1], 50)
-        y_ticks = np.arange(0, temperature_dem.shape[0], 50)
-        x_labels = [f"{int(coord):.0f}" for coord in glacier_dem.x.values[x_ticks]]
-        y_labels = [f"{int(coord):.0f}" for coord in glacier_dem.y.values[y_ticks]]
+        x_ticks = np.arange(0, temperature_dem.shape[1], 100)
+        y_ticks = np.arange(0, temperature_dem.shape[0], 100)
+        x_labels = [f"{int(coord):.0f}" for coord in temperature_dem.x.values[x_ticks]]
+        y_labels = [f"{int(coord):.0f}" for coord in temperature_dem.y.values[y_ticks]]
         ax.set_xticks(x_ticks)
         ax.set_yticks(y_ticks)
         ax.set_xticklabels(x_labels, rotation=45, ha='right')
@@ -240,5 +257,21 @@ for rgiid, gl_name in gl_names.items():
 
 # map of ice temperatures
 for rgiid, gl_name in gl_names.items():
-    # IceTempPlot.map10m(rgiid, "2019", gl_names) # 2019
-    IceTempPlot.map10m(rgiid, "1980", gl_names) # 1980
+    # Create a list to store the images
+    images = []
+
+    for year in range(1980, 2020):
+        IceTempPlot.map10m(rgiid, str(year), gl_names)
+
+        # List all the image files for the current glacier and year
+        image_files = glob.glob(f"/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/10m_ice_temp_map_{gl_name}_*.png")
+
+        # Sort the image files based on the year in the filename
+        image_files.sort(key=lambda x: int(x.split("_")[-1].split(".")[0]))
+
+        # Read each image file and append it to the images list
+        for image_file in image_files:
+            images.append(imageio.imread(image_file))
+
+    # Save the images as a GIF for the current glacier
+    imageio.mimsave(f"/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/{gl_name}_temperature_evolution.gif", images, duration=0.5)
