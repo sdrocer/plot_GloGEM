@@ -15,7 +15,6 @@ import shapefile as shp
 import geopandas as gpd
 import rioxarray as rxr
 import xarray as xr
-import rasterio
 from rasterio.merge import merge
 from shapely.geometry import mapping
 
@@ -23,7 +22,6 @@ from shapely.geometry import mapping
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.cm as cm
-import imageio # for creating gifs
 from matplotlib.dates import YearLocator, DateFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable # to create a colorbar
 
@@ -183,7 +181,7 @@ class plot_firnice_temperature:
         # Plot the temperature_dem
         fig, ax = plt.subplots(figsize=(15, 12))
         plt.rcParams.update({'font.size': 20})  # Adjust font size as needed
-        im = plt.imshow(temperature_dem, cmap='coolwarm')
+        im = plt.imshow(temperature_dem, cmap='coolwarm', vmin=-10, vmax=-0.05)
         plt.title(f"{bands_dir[-13:-10]} ice temperatures for {gl_name} in {year}", fontsize=22, fontweight='bold', pad=20)  # Add pad=20 to increase the distance of the title from the plot
         plt.grid()
         
@@ -191,9 +189,13 @@ class plot_firnice_temperature:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.2)
         cbar = plt.colorbar(im, cax=cax, label='Ice Temperature [°C]')
+        
+        # Modify the colorbar ticks
+        cbar.ax.set_yticks([-10, -8, -6, -4, -2, -0.05])
+        cbar.ax.set_yticklabels(['< -10','-8','-6','-4','-2','> -0.05'])
 
         # Find the equilibrium line altitude (ELA) for the glacier
-        elas = pd.read_csv(ela_dir, delim_whitespace=True, header=0)
+        elas = pd.read_csv(ela_dir, delimiter=r"\s+", header=0)
         ela = elas[year]  # set ELA
 
         # Draw contour lines & ELA
@@ -201,11 +203,15 @@ class plot_firnice_temperature:
         ela_contour  = ax.contour(glacier_dem, levels=[ela], colors='black', linewidths=3, linestyles='dashed')
         el1,_ = all_contours.legend_elements()
         el2,_ = ela_contour.legend_elements()
-        ax.legend(el1 + el2, ['Elevation Contour', 'ELA'], loc='upper left', handles=[el1[0], el2[0]], labels=['50m contours', 'ELA'])
+
+        # Add the legend inside the plot area
+        legend = ax.legend(el1 + el2, ['Elevation Contour', 'ELA'], loc='upper left', handles=[el1[0], el2[0]], labels=['50m contours', 'ELA'])
+        legend.get_frame().set_edgecolor('black')  # Set the color of the legend frame
+        legend.get_frame().set_linewidth(1.0)  # Set the width of the legend frame
 
         # Set x and y axis labels to CRS coordinates without decimals
-        x_ticks = np.arange(0, temperature_dem.shape[1], 100)
-        y_ticks = np.arange(0, temperature_dem.shape[0], 100)
+        x_ticks = np.arange(0, temperature_dem.shape[1], temperature_dem.shape[1] // 10)  # Adjust the number of ticks based on the size of the overall image
+        y_ticks = np.arange(0, temperature_dem.shape[0], temperature_dem.shape[0] // 10)
         x_labels = [f"{int(coord):.0f}" for coord in temperature_dem.x.values[x_ticks]]
         y_labels = [f"{int(coord):.0f}" for coord in temperature_dem.y.values[y_ticks]]
         ax.set_xticks(x_ticks)
@@ -217,10 +223,6 @@ class plot_firnice_temperature:
         ax.set_xlabel("Easting [m]")
         ax.set_ylabel("Northing [m]")
 
-        # Adjust vmin and vmax based on the data range
-        vmin = np.nanmin(temperature_dem)
-        vmax = np.nanmax(temperature_dem)
-        im.set_clim(vmin, vmax)
         plt.tight_layout()
 
         # Save the plot
@@ -239,15 +241,20 @@ IceTempPlot.single_point(dir, ['3','5','9','14','24','34'],"Aletsch glacier") # 
 
 ## Glacier Candidates (according to Doctoral Plan)
 
-# create dictionary containing rgiids and glacier names
-gl_names = {"02624": "Chessjengletscher",
-            "02526": "Hohlaubgletscher",
-            "02244": "Sex Rouge",
-            "02600": "Glacier de Tortin",
-            "01931": "Milibachgletscher",
-            "01962": "Vadret dal Corvatsch",
-            "02803": "Triftjigletscher at Gornergrat",
-            "02692": "Alphubel South"
+# create dictionary containing rgiids and glacier names for the glacier candidates
+gl_names = {"02671": "Chessjengletscher East",
+            # "02624": "Chessjengletscher",
+            # "02526": "Hohlaubgletscher",
+            # "02244": "Sex Rouge",
+            # "02600": "Glacier de Tortin",
+            # "01931": "Milibachgletscher",
+            # "01962": "Vadret dal Corvatsch",
+            # "02803": "Triftjigletscher at Gornergrat",
+            # "02692": "Alphubel South"
+            }
+
+# create dictionary containing rgiids and glacier names for interesting glaciers
+gl_names = {"01450": "Aletsch Glacier",
             }
 
 # single point, different depths
@@ -257,21 +264,5 @@ for rgiid, gl_name in gl_names.items():
 
 # map of ice temperatures
 for rgiid, gl_name in gl_names.items():
-    # Create a list to store the images
-    images = []
-
     for year in range(1980, 2020):
         IceTempPlot.map10m(rgiid, str(year), gl_names)
-
-        # List all the image files for the current glacier and year
-        image_files = glob.glob(f"/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/10m_ice_temp_map_{gl_name}_*.png")
-
-        # Sort the image files based on the year in the filename
-        image_files.sort(key=lambda x: int(x.split("_")[-1].split(".")[0]))
-
-        # Read each image file and append it to the images list
-        for image_file in image_files:
-            images.append(imageio.imread(image_file))
-
-    # Save the images as a GIF for the current glacier
-    imageio.mimsave(f"/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/{gl_name}_temperature_evolution.gif", images, duration=0.5)
