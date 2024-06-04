@@ -24,3 +24,9 @@ class Read_GloGEM():
         temp_data.replace(-99.0, np.nan, inplace=True)
         return (temp_data)
     
+    def elevation_band_consensus_ice_thickness(dir):
+        """reads the elevation band ouput of the consensus_ice_thickness of 2019 & returns it as a dataframe"""
+        thickness_data = pd.read_csv(dir, delimiter=r"\s+", header=4, index_col='Elev_start')
+        thickness_data.replace(-99.0, np.nan, inplace=True)
+        return (thickness_data)
+    
