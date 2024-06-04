@@ -243,15 +243,107 @@ class plot_firnice_temperature:
         # check glacier name
         gl_name = gl_names[rgiid_to_find]
 
-def plot_ice_thickness(self, rgiid_to_find, gl_names):
+def plot_ice_thickness(rgiid_to_find, gl_names):
     """
         Function to plot the ice thickness of a glacier (per elevation band) on the basis of rgi60 bands consensus 2019
     """
+    # check glacier name
+    gl_name = gl_names[rgiid_to_find]
+
     # set directions
     thickness_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/global_ice_thickness/centraleurope/" + rgiid_to_find + ".dat" # ice thickness per elevation band
     rgi_dir = "/Users/janoschbeer/iCloud/PhD/data/RGI/11_rgi60_CentralEurope/11_rgi60_CentralEurope.shp"
+    ela_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/main_output/" + rgiid_to_find + "_ELA_r1.dat"
 
-    pass
+    # set dem directory -> find the folder that contains the gl_name
+    dem_dir = ""
+    swissALTI3D_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/swissALTI3D/"
+    folders = glob.glob(swissALTI3D_dir + "*")
+    for folder in folders:
+        if gl_name in folder:
+            dem_dir = folder + "/merged_ortho.tif"
+            break
+
+    thickness_data = Read_GloGEM.elevation_band_consensus_ice_thickness(thickness_dir)
+    
+    # read RGI60 shapefile
+    rgi_gdf = gpd.read_file(rgi_dir)
+
+    # read DEM
+    dem = rxr.open_rasterio(dem_dir, masked=True).squeeze()
+
+    # find the glacier of interest
+    glacier_geom = rgi_gdf[rgi_gdf['RGIId'] == "RGI60-11." + rgiid_to_find]
+
+    # clip the DEM to the glacier
+    glacier_dem = dem.rio.clip(glacier_geom.geometry.apply(mapping),
+                                # This is needed if your GDF is in a diff CRS than the raster data
+                                glacier_geom.crs)
+
+    # save the clipped DEM
+    glacier_dem.rio.to_raster("glacier_dem.tif")
+
+    # Initialize thickness_dem with NaN values
+    thickness_dem = xr.full_like(glacier_dem, np.nan)
+
+    # Iterate over the rows in temp_data
+    for elev, row in thickness_data.iterrows():
+        # Get the temperature
+        thickness = row['Thickness(m)']
+
+        # Find all pixels in glacier_dem that fall within the elevation range
+        in_range = ((glacier_dem >= elev) & (glacier_dem < elev+10))
+
+        # Assign the temperature to those pixels in thickness_dem
+        thickness_dem = xr.where(in_range, thickness, thickness_dem)
+
+    # Plot the ice thickness_dem
+    fig, ax = plt.subplots(figsize=(15, 12))
+    plt.rcParams.update({'font.size': 20})  # Adjust font size as needed
+    im = plt.imshow(thickness_dem, cmap='viridis_r')
+    plt.title(f"Ice thickness for {gl_name} in 2019", fontsize=22, fontweight='bold', pad=20)  # Add pad=20 to increase the distance of the title from the plot
+    plt.grid()
+    
+    # Add colorbar that is the same height as the plot
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.2)
+    cbar = plt.colorbar(im, cax=cax, label='Ice thickness [m]')
+
+    # Find the equilibrium line altitude (ELA) for the glacier
+    elas = pd.read_csv(ela_dir, delimiter=r"\s+", header=0)
+    ela = elas['2019']  # set ELA
+
+    # Draw contour lines & ELA
+    all_contours = ax.contour(glacier_dem, levels=range(0, int(glacier_dem.max()), 50), colors='black', linewidths=0.5)
+    ela_contour  = ax.contour(glacier_dem, levels=[ela], colors='black', linewidths=3, linestyles='dashed')
+    el1,_ = all_contours.legend_elements()
+    el2,_ = ela_contour.legend_elements()
+
+    # Add the legend inside the plot area
+    legend = ax.legend(el1 + el2, ['Elevation Contour', 'ELA'], loc='upper left', handles=[el1[0], el2[0]], labels=['50m contours', 'ELA'])
+    legend.get_frame().set_edgecolor('black')  # Set the color of the legend frame
+    legend.get_frame().set_linewidth(1.0)  # Set the width of the legend frame
+
+    # Set x and y axis labels to CRS coordinates without decimals
+    x_ticks = np.arange(0, thickness_dem.shape[1], thickness_dem.shape[1] // 10)  # Adjust the number of ticks based on the size of the overall image
+    y_ticks = np.arange(0, thickness_dem.shape[0], thickness_dem.shape[0] // 10)
+    x_labels = [f"{int(coord):.0f}" for coord in thickness_dem.x.values[x_ticks]]
+    y_labels = [f"{int(coord):.0f}" for coord in thickness_dem.y.values[y_ticks]]
+    ax.set_xticks(x_ticks)
+    ax.set_yticks(y_ticks)
+    ax.set_xticklabels(x_labels, rotation=45, ha='right')
+    ax.set_yticklabels(y_labels)
+
+    # Add text below the figure
+    plt.figtext(0.5, 0.01, "Ice thickness on the basis of the consensus estimate (Farinotti et al. 2019)", ha='center', fontsize=12)
+
+    # set x and y axis labels
+    ax.set_xlabel("Easting [m]")
+    ax.set_ylabel("Northing [m]")
+    plt.tight_layout()
+
+    # Save the plot
+    plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/" + gl_name + "/ice_thickness/ice_thickness_2019_" + gl_name + ".png")
 
 ## Plotting ##
 
@@ -265,14 +357,14 @@ IceTempPlot.single_point(dir, ['3','5','9','14','24','34'],"Aletsch glacier") # 
 
 # create dictionary containing rgiids and glacier names for the glacier candidates
 gl_names = {"02671": "Chessjengletscher East",
-            # "02624": "Chessjengletscher",
-            # "02526": "Hohlaubgletscher",
-            # "02244": "Sex Rouge",
-            # "02600": "Glacier de Tortin",
-            # "01931": "Milibachgletscher",
-            # "01962": "Vadret dal Corvatsch",
-            # "02803": "Triftjigletscher at Gornergrat",
-            # "02692": "Alphubel South"
+            "02624": "Chessjengletscher",
+            "02526": "Hohlaubgletscher",
+            "02244": "Sex Rouge",
+            "02600": "Glacier de Tortin",
+            "01931": "Milibachgletscher",
+            "01962": "Vadret dal Corvatsch",
+            "02803": "Triftjigletscher at Gornergrat",
+            "02692": "Alphubel South"
             }
 
 # create dictionary containing rgiids and glacier names for interesting glaciers
@@ -288,3 +380,7 @@ for rgiid, gl_name in gl_names.items():
 for rgiid, gl_name in gl_names.items():
     for year in range(1980, 2020):
         IceTempPlot.map10m(rgiid, str(year), gl_names)
+
+# ice thickness
+for rgiid, gl_name in gl_names.items():
+    plot_ice_thickness(rgiid, gl_names)
