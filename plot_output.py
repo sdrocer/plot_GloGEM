@@ -22,6 +22,7 @@ from shapely.geometry import mapping
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 from matplotlib.dates import YearLocator, DateFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable # to create a colorbar
 
@@ -32,6 +33,13 @@ from read_output import Read_GloGEM # make sure to change the working directory 
 # plot settings
 plt.rcParams['figure.dpi'] = 200                                # Adjust DPI as needed
 plt.rcParams.update({'font.family': 'Arial', 'font.size': 12})  # Adjust font size & family as needed
+
+# create custom colormap
+coolwarm = plt.cm.get_cmap('coolwarm')
+red = coolwarm(0.99)  # Get the red color
+blue_colors = [coolwarm(i) for i in np.linspace(0.0, 0.5, 100)]  # Get the blue colors
+colors = blue_colors + [red] # Combine the blue colors with the red color
+icetemp = mcolors.LinearSegmentedColormap.from_list('new_cmap', colors)
 
 def glacyear_to_calyear(start_year, end_year):
     """
@@ -125,7 +133,7 @@ class plot_firnice_temperature:
         gl_name = gl_names[rgiid_to_find]
 
         # set directions
-        main_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates/"
+        main_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates_no_permeability/" + gl_name + "/"
         bands_dir = main_dir + "temp_10m_" + rgiid_to_find + ".dat"
         rgi_dir = "/Users/janoschbeer/iCloud/PhD/data/RGI/11_rgi60_CentralEurope/11_rgi60_CentralEurope.shp"
         ela_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/main_output/" + rgiid_to_find + "_ELA_r1.dat"
@@ -181,7 +189,7 @@ class plot_firnice_temperature:
         # Plot the temperature_dem
         fig, ax = plt.subplots(figsize=(15, 12))
         plt.rcParams.update({'font.size': 20})  # Adjust font size as needed
-        im = plt.imshow(temperature_dem, cmap='coolwarm', vmin=-10, vmax=-0.05)
+        im = plt.imshow(temperature_dem, cmap=icetemp, vmin=-10, vmax=-0.05)
         plt.title(f"{bands_dir[-13:-10]} ice temperatures for {gl_name} in {year}", fontsize=22, fontweight='bold', pad=20)  # Add pad=20 to increase the distance of the title from the plot
         plt.grid()
         
@@ -226,10 +234,24 @@ class plot_firnice_temperature:
         plt.tight_layout()
 
         # Save the plot
-        plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/10m_ice_temp_map_" + gl_name + "_" + year + ".png")
+        plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/" + gl_name + "/sensitivity_permeability/10m_ice_temp_map_" + gl_name + "_" + year + ".png")
 
         # Write temperature_dem to a new raster
         temperature_dem.rio.to_raster("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/rasters/10m_ice_temp_map_" + gl_name + "_" + year +".tif")
+
+    def gl_profile(self, rgiid_to_find, year, gl_names):
+        # check glacier name
+        gl_name = gl_names[rgiid_to_find]
+
+def plot_ice_thickness(self, rgiid_to_find, gl_names):
+    """
+        Function to plot the ice thickness of a glacier (per elevation band) on the basis of rgi60 bands consensus 2019
+    """
+    # set directions
+    thickness_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/global_ice_thickness/centraleurope/" + rgiid_to_find + ".dat" # ice thickness per elevation band
+    rgi_dir = "/Users/janoschbeer/iCloud/PhD/data/RGI/11_rgi60_CentralEurope/11_rgi60_CentralEurope.shp"
+
+    pass
 
 ## Plotting ##
 
