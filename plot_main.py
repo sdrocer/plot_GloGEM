@@ -11,16 +11,14 @@ import pandas as pd
 import glob
 
 # import geospatial libraries
-import shapefile as shp
 import geopandas as gpd
 import rioxarray as rxr
 import xarray as xr
-from rasterio.merge import merge
+import richdem as rd 
 from shapely.geometry import mapping
 
 # import plotting libraries
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 from matplotlib.dates import YearLocator, DateFormatter
@@ -413,44 +411,46 @@ class plot_glacier_slope:
 
         # find the glacier of interest
         glacier_geom = rgi_gdf[rgi_gdf['RGIId'] == "RGI60-11." + rgiid_to_find]
-
-        # Calculate the slope
-        slope = rd.TerrainAttribute(shasta_dem, attrib='slope_riserun')
-
-        glacier_slope = dem.rio.calculate_slope()
-
-        # clip the slope to the glacier
-        glacier_slope = glacier_slope.rio.clip(glacier_geom.geometry.apply(mapping),
-                                    # This is needed if your GDF is in a diff CRS than the raster data
-                                    glacier_geom.crs)
         
-        # clip the DEM to the glacier
+        # clip the DEM to the glacier for slope calculation
+        glacier_dem_for_slope = rd.rdarray(dem.rio.clip(glacier_geom.geometry.apply(mapping),
+                            # This is needed if your GDF is in a diff CRS than the raster data
+                            glacier_geom.crs).values, no_data=dem.rio.nodata)
+        
+        # clip the DEM to the glacier for plotting
         glacier_dem = dem.rio.clip(glacier_geom.geometry.apply(mapping),
                                     # This is needed if your GDF is in a diff CRS than the raster data
                                     glacier_geom.crs)
-        
+                
+        # Calculate the slope
+        glacier_slope = rd.TerrainAttribute(glacier_dem_for_slope, attrib='slope_degrees')
 
         # Plot the slope
         fig, ax = plt.subplots(figsize=(15, 15))
         plt.rcParams.update({'font.size': 20})
-        im = plt.imshow(glacier_slope, cmap='Reds')
+        im = plt.imshow(glacier_slope, cmap='Reds', vmin=0, vmax=90)
         plt.title(f"Slope of {gl_name}", fontsize=22, fontweight='bold', pad=20)  # Add pad=20 to increase the distance of the title from the plot
         plt.grid()
+        
+        # Add colorbar that is the same height as the plot
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.2)
+        cbar = plt.colorbar(im, cax=cax, label='Slope [degrees]')
 
         # Draw contour lines & ELA
         all_contours = ax.contour(glacier_dem, levels=range(0, int(glacier_dem.max()), 50), colors='black', linewidths=0.5)
         el1,_ = all_contours.legend_elements()
 
         # Add the legend inside the plot area
-        legend = ax.legend(el1 ['Elevation Contour'], loc='upper left', handles=[el1[0]], labels=['50m contours'])
+        legend = ax.legend(el1, ['Elevation Contour'], loc='upper left', handles=[el1[0]], labels=['50m contours'])
         legend.get_frame().set_edgecolor('black')  # Set the color of the legend frame
         legend.get_frame().set_linewidth(1.0)  # Set the width of the legend frame
 
         # Set x and y axis labels to CRS coordinates without decimals
-        x_ticks = np.arange(0, glacier_slope.shape[1], glacier_slope.shape[1] // 10)  # Adjust the number of ticks based on the size of the overall image
-        y_ticks = np.arange(0, glacier_slope.shape[0], glacier_slope.shape[0] // 10)
-        x_labels = [f"{int(coord):.0f}" for coord in glacier_slope.x.values[x_ticks]]
-        y_labels = [f"{int(coord):.0f}" for coord in glacier_slope.y.values[y_ticks]]
+        x_ticks = np.arange(0, glacier_dem.shape[1], glacier_dem.shape[1] // 10)  # Adjust the number of ticks based on the size of the overall image
+        y_ticks = np.arange(0, glacier_dem.shape[0], glacier_dem.shape[0] // 10)
+        x_labels = [f"{int(coord):.0f}" for coord in glacier_dem.x.values[x_ticks]]
+        y_labels = [f"{int(coord):.0f}" for coord in glacier_dem.y.values[y_ticks]]
         ax.set_xticks(x_ticks)
         ax.set_yticks(y_ticks)
         ax.set_xticklabels(x_labels, rotation=45, ha='right')
@@ -474,15 +474,15 @@ IceSlopePlot = plot_glacier_slope()      # glacier slope
 
 # create dictionary containing rgiids and glacier names for the glacier candidates
 rgi_names = {"01450": "Aletsch Glacier",
-            # "02671": "Chessjengletscher East",
+            "02671": "Chessjengletscher East",
             # "02624": "Feegletscher",
-            # "02526": "Hohlaubgletscher",
-            # "02244": "Sex Rouge",
-            # "02600": "Glacier de Tortin",
-            # "01931": "Milibachgletscher",
-            # "01962": "Vadret dal Corvatsch",
-            # "02803": "Triftjigletscher at Gornergrat",
-            # "02692": "Alphubel South"
+            "02526": "Hohlaubgletscher",
+            "02244": "Sex Rouge",
+            "02600": "Glacier de Tortin",
+            "01931": "Milibachgletscher",
+            "01962": "Vadret dal Corvatsch",
+            "02803": "Triftjigletscher at Gornergrat",
+            "02692": "Alphubel South"
 }
 
 # create dictionary containing sgiids and glacier names for the Swiss Glacier Inventory
