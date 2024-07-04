@@ -25,8 +25,8 @@ from matplotlib.dates import YearLocator, DateFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable # to create a colorbar
 
 # change working directory
-os.chdir("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM")
-from read_output import Read_GloGEM # make sure to change the working directory to folder where you code -> os.chdir
+os.chdir("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/code/plot_GloGEM")
+from read_GloGEM import Read_GloGEM # make sure to change the working directory to folder where you code -> os.chdir
 
 # plot settings
 plt.rcParams['figure.dpi'] = 200                                # Adjust DPI as needed
@@ -129,12 +129,13 @@ class plot_firnice_temperature:
         """
         # check glacier name
         gl_name = gl_names[rgiid_to_find]
+        scenario = "_min5"
 
         # set directions
-        main_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/firnice_temperature/glacier_candidates_no_permeability/"
+        main_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/projects/GloGEM_sensitivity_experiment/new_data/firnice_temperature/glacier_candidates" + scenario + "/"
         bands_dir = main_dir + "temp_10m_" + rgiid_to_find + ".dat"
         rgi_dir = "/Users/janoschbeer/iCloud/PhD/data/RGI/11_rgi60_CentralEurope/11_rgi60_CentralEurope.shp"
-        ela_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/data/GloGEM/main_output/" + rgiid_to_find + "_ELA_r1.dat"
+        ela_dir = "/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/projects/GloGEM_sensitivity_experiment/new_data/main_output/"+ "glacier_candidates" + scenario + "/" + rgiid_to_find + "_ELA_r1.dat"
         
         # set dem directory -> find the folder that contains the gl_name
         dem_dir = ""
@@ -232,10 +233,10 @@ class plot_firnice_temperature:
         plt.tight_layout()
 
         # Save the plot
-        plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/plots/" + gl_name + "/englacial_temperature_no_permeability/10m_ice_temp_map_" + gl_name + "_" + year + ".png")
+        plt.savefig("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/projects/GloGEM_sensitivity_experiment/products/plots/" + gl_name + "/englacial_temperature" + scenario + "/10m_ice_temp_map_" + gl_name + "_" + year + ".png")
 
         # Write temperature_dem to a new raster
-        temperature_dem.rio.to_raster("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/Code/plot_GloGEM/rasters/10m_ice_temp_map_" + gl_name + "_" + year +".tif")
+        temperature_dem.rio.to_raster("/Users/janoschbeer/Library/Mobile Documents/com~apple~CloudDocs/PhD/projects/GloGEM_sensitivity_experiment/products/firnice_temperature_rasters/glacier_candidates" + scenario + "/10m_ice_temp_map_" + gl_name + "_" + year +".tif")
 
     def gl_profile(self, rgiid_to_find, year, gl_names):
         # check glacier name
@@ -287,7 +288,7 @@ class plot_ice_thickness:
 
         # Iterate over the rows in temp_data
         for elev, row in thickness_data.iterrows():
-            # Get the temperature
+            # Get the thickness
             thickness = row['Thickness(m)']
 
             # Find all pixels in glacier_dem that fall within the elevation range
@@ -473,22 +474,23 @@ IceSlopePlot = plot_glacier_slope()      # glacier slope
 ## Glacier Candidates (according to Doctoral Plan)
 
 # create dictionary containing rgiids and glacier names for the glacier candidates
-rgi_names = {"01450": "Aletsch Glacier",
-            "02671": "Chessjengletscher East",
-            # "02624": "Feegletscher",
-            "02526": "Hohlaubgletscher",
-            "02244": "Sex Rouge",
-            "02600": "Glacier de Tortin",
+rgi_names = {
+            # "01450": "Aletsch Glacier",
+            # "02671": "Chessjengletscher East",
+            # "02624": "Chessjengletscher",
+            # "02540": "Hohlaubgletscher",
+            # "02244": "Sex Rouge",
+            # "02600": "Glacier de Tortin",
             "01931": "Milibachgletscher",
-            "01962": "Vadret dal Corvatsch",
-            "02803": "Triftjigletscher at Gornergrat",
-            "02692": "Alphubel South"
+            # "01962": "Vadret dal Corvatsch",
+            # "02803": "Triftjigletscher at Gornergrat",
+            # "02692": "Alphubel South"
 }
 
 # create dictionary containing sgiids and glacier names for the Swiss Glacier Inventory
 sgi_names = {"B36-26" : "Aletsch Glacier",
              "B52-33" : "Chessjengletscher East",
-             "B53-04" : "Feegletscher",
+             "B53-04" : "Chessjengletscher",
              "B51-12" : "Hohlaubgletscher",
              "B16-01" : "Sex Rouge",
              "B75-12" : "Glacier de Tortin",
